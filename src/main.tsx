@@ -280,6 +280,9 @@ function updateState(params: {
       let hitFood = level[yIdx][xIdx] == ".";
       if (hitFood) {
         setState("level", yIdx, xIdx, " ");
+        if (!sounds.isPlayingSound("Chomp")) {
+          sounds.playSound("Chomp");
+        }
       }
     }
     let pos = state.pacMan.pos;

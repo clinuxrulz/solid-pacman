@@ -29,7 +29,23 @@ export class Sounds {
     }
 
     playSound(sound: Sound) {
-        this.soundMap.get(sound)?.audio?.play?.();
+        let audio = this.soundMap.get(sound)?.audio;
+        if (audio == undefined) {
+            return;
+        }
+        audio.play();
+    }
+
+    stopSound(sound: Sound) {
+        let audio = this.soundMap.get(sound)?.audio;
+        if (audio == undefined) {
+            return;
+        }
+        audio.pause();
+    }
+
+    isPlayingSound(sound: Sound) {
+        return !(this.soundMap.get(sound)?.audio?.paused ?? true);
     }
 
     static async load(): Promise<Sounds> {
