@@ -386,42 +386,52 @@ function RenderLevel(props: { level: Level }): JSX.Element {
                 createMemo(() => {
                   let cell2 = cell();
                   if (cell2 == "*") {
-                    let hasLeft = j == 0 ? false : row()[j - 1] == "*";
-                    let hasRight =
-                      j == row().length - 1 ? false : row()[j + 1] == "*";
-                    let hasUp = i == 0 ? false : props.level[i - 1][j] == "*";
-                    let hasDown =
+                    let hasLeft = createMemo(() =>
+                      j == 0 ? false : row()[j - 1] == "*"
+                    );
+                    let hasRight = createMemo(() =>
+                      j == row().length - 1 ? false : row()[j + 1] == "*"
+                    );
+                    let hasUp = createMemo(() =>
+                      i == 0 ? false : props.level[i - 1][j] == "*"
+                    );
+                    let hasDown = createMemo(() =>
                       i == props.level.length - 1
                         ? false
-                        : props.level[i + 1][j] == "*";
-                    let hasLeftUp =
+                        : props.level[i + 1][j] == "*"
+                    );
+                    let hasLeftUp = createMemo(() =>
                       j == 0 || i == 0
                         ? false
-                        : props.level[i - 1][j - 1] == "*";
-                    let hasRightUp =
+                        : props.level[i - 1][j - 1] == "*"
+                    );
+                    let hasRightUp = createMemo(() =>
                       j == row().length - 1 || i == 0
                         ? false
-                        : props.level[i - 1][j + 1] == "*";
-                    let hasLeftDown =
+                        : props.level[i - 1][j + 1] == "*"
+                    );
+                    let hasLeftDown = createMemo(() =>
                       j == 0 || i == props.level.length - 1
                         ? false
-                        : props.level[i + 1][j - 1] == "*";
-                    let hasRightDown =
+                        : props.level[i + 1][j - 1] == "*"
+                    );
+                    let hasRightDown = createMemo(() =>
                       j == row().length - 1 || i == props.level.length - 1
                         ? false
-                        : props.level[i + 1][j + 1] == "*";
+                        : props.level[i + 1][j + 1] == "*"
+                    );
                     return (props2) => (
                       <RenderBlock
                         x={props2.x}
                         y={props2.y}
-                        hasLeft={hasLeft}
-                        hasRight={hasRight}
-                        hasUp={hasUp}
-                        hasDown={hasDown}
-                        hasLeftUp={hasLeftUp}
-                        hasRightUp={hasRightUp}
-                        hasLeftDown={hasLeftDown}
-                        hasRightDown={hasRightDown}
+                        hasLeft={hasLeft()}
+                        hasRight={hasRight()}
+                        hasUp={hasUp()}
+                        hasDown={hasDown()}
+                        hasLeftUp={hasLeftUp()}
+                        hasRightUp={hasRightUp()}
+                        hasLeftDown={hasLeftDown()}
+                        hasRightDown={hasRightDown()}
                       />
                     );
                   } else if (cell2 == ".") {
