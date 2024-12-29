@@ -328,7 +328,7 @@ function updateState(params: {
         ) {
           setState("pacMan", "dying", {
             animationIdx: 0,
-            animationLength: 100,
+            animationLength: 80,
           });
           sounds.playSound("Death");
           return;
@@ -1163,6 +1163,36 @@ function RenderGhost(props: {
 }
 
 function RenderPop(props: { x: number, y: number }): JSX.Element {
-
-  return ;
+  let parts: { v1x: number, v1y: number, v2x: number, v2y: number, }[] = [];
+  let numParts = 8;
+  let a = 0;
+  let stepA = 2.0 * Math.PI / numParts;
+  let r1 = 0.3 * BLOCK_SIZE;
+  let r2 = 0.8 * BLOCK_SIZE;
+  for (let i = 0; i < numParts; ++i, a += stepA) {
+    let ca = Math.cos(a);
+    let sa = Math.sin(a);
+    parts.push({
+      v1x: ca * r1,
+      v1y: sa * r1,
+      v2x: ca * r2,
+      v2y: sa * r2,
+    });
+  }
+  return (
+    <g transform={`translate(${props.x + HALF_BLOCK_SIZE} ${props.y + HALF_BLOCK_SIZE})`}>
+      <For each={parts}>
+        {(part) => (
+          <line
+            x1={part.v1x}
+            y1={part.v1y}
+            x2={part.v2x}
+            y2={part.v2y}
+            stroke="yellow"
+            stroke-width={WALL_THICKNESS}
+          />
+        )}
+      </For>
+    </g>
+  );
 }
