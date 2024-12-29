@@ -118,6 +118,9 @@ appDiv.style.setProperty("height", "100%");
 appDiv.style.setProperty("tabindex", "0");
 
 type GameState = {
+  playingIntroMusic: boolean,
+  playingIntroMusicStartTime: number,
+  playing: boolean,
   pacMan:
     | {
         pos: { x: number; y: number };
@@ -141,6 +144,9 @@ type GameState = {
 
 function Game(props: {}): JSX.Element {
   let [state, setState] = createStore<GameState>({
+    playingIntroMusic: false,
+    playingIntroMusicStartTime: 0.0,
+    playing: false,
     pacMan: {
       pos: {
         x: 20.0,
@@ -160,6 +166,11 @@ function Game(props: {}): JSX.Element {
   });
   let dijkstra = new Dijkstra({ level: untrack(() => state.level) });
   let keydownListener = (e: KeyboardEvent) => {
+    if (!state.playing && !state.playingIntroMusic) {
+      setState("playingIntroMusic", true);
+      setState("playingIntroMusicStartTime", time());
+      sounds.playSound("Intro");
+    }
     if (e.key == "ArrowLeft") {
       setState("pacMan", "bufferedMove", "Left");
     } else if (e.key == "ArrowRight") {
@@ -208,9 +219,18 @@ function updateState(params: {
   time: number;
   dijkstra: Dijkstra;
 }) {
-  let level = params.state.level;
   let state = params.state;
   let setState = params.setState;
+  if (!params.state.playing) {
+    if (params.state.playingIntroMusic) {
+      if (params.time - params.state.playingIntroMusicStartTime >= 4.5) {
+        setState("playingIntroMusic", false);
+        setState("playing", true);
+      }
+    }
+    return;
+  }
+  let level = params.state.level;
   if (state.pacMan != undefined && state.pacMan.dying == undefined) {
     {
       let pos = state.pacMan.pos;
@@ -553,6 +573,16 @@ function Render(props: {
             />
           )}
         </For>
+        <Show when={!props.state.playingIntroMusic && !props.state.playing}>\
+          <text
+            x="80"
+            y="140"
+            stroke="none"
+            fill="red"
+          >
+            Press any key to start!
+          </text>
+        </Show>
         {/*
         <RenderVerticleBlock x={10} y={10 + BLOCK_SIZE} />
         <RenderHorizontalBlock x={10 + BLOCK_SIZE} y={10} />
