@@ -27,6 +27,26 @@ function loadLevel(data: string[]): Level {
   );
 }
 
+function findGhosts(data: string[]): GameState["ghosts"] {
+  let result: GameState["ghosts"] = [];
+  let atY = 0;
+  for (let i = 0; i < data.length; ++i, atY += BLOCK_SIZE) {
+    let row = data[i];
+    let atX = 0;
+    for (let j = 0; j < row.length; ++j, atX += BLOCK_SIZE) {
+      let cell = row.charAt(j);
+      if (cell == "G") {
+        result.push({
+          pos: { x: atX, y: atY, },
+          faceDir: { x: 0, y: -1, },
+          colour: genGhostColour(),
+        });
+      }
+    }
+  }
+  return result;
+}
+
 const level = [
   "******************************",
   "******************************",
@@ -43,7 +63,7 @@ const level = [
   "     **.**          **.**     ",
   "*******.** ***--*** **.*******",
   "*******.** ***  *** **.*******",
-  "       .   **    **   .       ",
+  "       .   **GGGG**   .       ",
   "*******.** ******** **.*******",
   "*******.** ******** **.*******",
   "     **.**          **.**     ",
@@ -62,6 +82,22 @@ const level = [
   "******************************",
   "******************************",
 ];
+
+const ghostColours: string[] = [
+  "orange",
+  "red",
+  "pink",
+  "cyan"
+];
+
+var genGhostColour = (() => {
+  let nextIdx = 0;
+  return () => {
+    let idx = nextIdx;
+    nextIdx = (nextIdx + 1) % ghostColours.length;
+    return ghostColours[idx];
+  };
+})();
 
 const App: Component = () => {
   return <Game />;
@@ -83,6 +119,11 @@ type GameState = {
         bufferedMove: "Left" | "Right" | "Up" | "Down" | undefined;
       }
     | undefined;
+  ghosts: {
+    pos: { x: number, y: number, },
+    faceDir: { x: number, y: number, },
+    colour: string,
+  }[];
   level: Level;
 };
 
@@ -100,6 +141,7 @@ function Game(props: {}): JSX.Element {
       moving: true,
       bufferedMove: undefined,
     },
+    ghosts: findGhosts(level),
     level: loadLevel(level),
   });
   let keydownListener = (e: KeyboardEvent) => {
@@ -339,15 +381,16 @@ function Render(props: {
             );
           }}
         </Show>
-        <RenderGhost
-          x={40}
-          y={40}
-          faceDir={{
-            x: 1.0,
-            y: 0.0,
-          }}
-          colour="pink"
-        />
+        <For each={props.state.ghosts}>
+          {(ghost) => (
+            <RenderGhost
+              x={ghost.pos.x}
+              y={ghost.pos.y}
+              faceDir={ghost.faceDir}
+              colour={ghost.colour}
+            />
+          )}
+        </For>
         {/*
         <RenderVerticleBlock x={10} y={10 + BLOCK_SIZE} />
         <RenderHorizontalBlock x={10 + BLOCK_SIZE} y={10} />
