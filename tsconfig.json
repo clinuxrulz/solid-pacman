@@ -11,12 +11,13 @@
       "es6",
       "dom"
     ],
-    "rootDir": "src",
     "moduleResolution": "node",
     "jsxImportSource": "solid-js",
     "types": [
-      "solid-js",
-      "solid-js/dom"
+      "solid-js"
     ]
-  }
+  },
+  "include": [
+    "src"
+  ]
 }
