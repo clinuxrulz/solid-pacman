@@ -376,11 +376,7 @@ function RenderLevel(props: { level: Level }): JSX.Element {
       {(row, i) => {
         let y = i * BLOCK_SIZE;
         return (
-          <Index
-            each={new Array(row().length)
-              .fill(undefined)
-              .map((_, i) => row()[i])}
-          >
+          <Index each={row()}>
             {(cell, j) => {
               let renderer: Accessor<Component<{ x: number; y: number }>> =
                 createMemo(() => {
