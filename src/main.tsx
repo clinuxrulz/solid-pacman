@@ -121,6 +121,7 @@ type GameState = {
         faceDir: { x: number; y: number };
         moving: boolean;
         bufferedMove: "Left" | "Right" | "Up" | "Down" | undefined;
+        lastChompTime: number;
       }
     | undefined;
   ghosts: {
@@ -144,6 +145,7 @@ function Game(props: {}): JSX.Element {
       },
       moving: true,
       bufferedMove: undefined,
+      lastChompTime: -1.0,
     },
     ghosts: findGhosts(level),
     level: loadLevel(level),
@@ -180,6 +182,7 @@ function Game(props: {}): JSX.Element {
           state,
           setState,
           dt,
+          time: time(),
         }),
       );
       lastTime = time2;
@@ -192,6 +195,7 @@ function updateState(params: {
   state: Store<GameState>;
   setState: SetStoreFunction<GameState>;
   dt: number;
+  time: number;
 }) {
   let level = params.state.level;
   let state = params.state;
@@ -280,8 +284,9 @@ function updateState(params: {
       let hitFood = level[yIdx][xIdx] == ".";
       if (hitFood) {
         setState("level", yIdx, xIdx, " ");
-        if (!sounds.isPlayingSound("Chomp")) {
+        if (params.time - state.pacMan.lastChompTime >= 0.52) {
           sounds.playSound("Chomp");
+          setState("pacMan", "lastChompTime", params.time);
         }
       }
     }

@@ -1,3 +1,5 @@
+import { Howl } from "howler";
+
 type Sound =
     "Chomp" |
     "Cutscene" |
@@ -10,18 +12,18 @@ type Sound =
 export class Sounds {
     private sounds: {
         sound: Sound,
-        audio: HTMLAudioElement,
+        audio: Howl,
         dispose: () => void,
     }[];
     private soundMap: Map<Sound,{
         sound: Sound,
-        audio: HTMLAudioElement,
+        audio: Howl,
         dispose: () => void,
     }>;
 
     private constructor(sounds: {
         sound: Sound,
-        audio: HTMLAudioElement,
+        audio: Howl,
         dispose: () => void,
     }[]) {
         this.sounds = sounds;
@@ -45,7 +47,11 @@ export class Sounds {
     }
 
     isPlayingSound(sound: Sound) {
-        return !(this.soundMap.get(sound)?.audio?.paused ?? true);
+        let audio = this.soundMap.get(sound)?.audio;
+        if (audio == undefined) {
+            return;
+        }
+        return audio.playing();
     }
 
     static async load(): Promise<Sounds> {
@@ -60,7 +66,7 @@ export class Sounds {
         ];
         let sounds = await Promise.all(
             soundsToLoad.map(async ([ sound, file ]) => {
-                let audio = new Audio(file);
+                let audio = new Howl({ src: [ file, ], });
                 let dispose = () => {
                     // ??
                 };
