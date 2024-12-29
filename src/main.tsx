@@ -22,6 +22,7 @@ const HALF_BLOCK_SIZE = BLOCK_SIZE / 2;
 const WALL_THICKNESS = 2;
 
 let sounds = await Sounds.load();
+console.log(sounds);
 
 type Level = string[][];
 
@@ -122,6 +123,10 @@ type GameState = {
         moving: boolean;
         bufferedMove: "Left" | "Right" | "Up" | "Down" | undefined;
         lastChompTime: number;
+        dying: {
+          animationIdx: number,
+          animationLength: number,
+        } | undefined,
       }
     | undefined;
   ghosts: {
@@ -146,6 +151,7 @@ function Game(props: {}): JSX.Element {
       moving: true,
       bufferedMove: undefined,
       lastChompTime: -1.0,
+      dying: undefined,
     },
     ghosts: findGhosts(level),
     level: loadLevel(level),
@@ -203,7 +209,7 @@ function updateState(params: {
   let level = params.state.level;
   let state = params.state;
   let setState = params.setState;
-  if (state.pacMan != undefined) {
+  if (state.pacMan != undefined && state.pacMan.dying == undefined) {
     {
       let pos = state.pacMan.pos;
       let yIdx = Math.max(
@@ -298,6 +304,32 @@ function updateState(params: {
         if (params.time - state.pacMan.lastChompTime >= 0.52) {
           sounds.playSound("Chomp");
           setState("pacMan", "lastChompTime", params.time);
+        }
+      }
+    }
+    {
+      // check for ghost touch pacman
+      let pacManMinX = state.pacMan.pos.x;
+      let pacManMinY = state.pacMan.pos.y;
+      let pacManMaxX = state.pacMan.pos.x + BLOCK_SIZE;
+      let pacManMaxY = state.pacMan.pos.y + BLOCK_SIZE;
+      for (let ghost of state.ghosts) {
+        let ghostMinX = ghost.pos.x;
+        let ghostMinY = ghost.pos.y;
+        let ghostMaxX = ghost.pos.x + BLOCK_SIZE;
+        let ghostMaxY = ghost.pos.y + BLOCK_SIZE;
+        if (
+          ghostMinX < pacManMaxX &&
+          ghostMinY < pacManMaxY &&
+          ghostMaxX > pacManMinX &&
+          ghostMaxY > pacManMinY
+        ) {
+          setState("pacMan", "dying", {
+            animationIdx: 0,
+            animationLength: 100,
+          });
+          sounds.playSound("Death");
+          return;
         }
       }
     }
