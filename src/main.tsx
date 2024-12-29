@@ -15,13 +15,13 @@ import type { Accessor, Component, JSX } from "solid-js";
 import { createStore } from "solid-js/store";
 import type { SetStoreFunction, Store } from "solid-js/store";
 import { Sounds } from "./Sounds";
+import { Dijkstra } from "./Dijkstra";
 
 const BLOCK_SIZE = 10;
 const HALF_BLOCK_SIZE = BLOCK_SIZE / 2;
 const WALL_THICKNESS = 2;
 
 let sounds = await Sounds.load();
-console.log(sounds);
 
 type Level = string[][];
 
@@ -150,6 +150,7 @@ function Game(props: {}): JSX.Element {
     ghosts: findGhosts(level),
     level: loadLevel(level),
   });
+  let dijkstra = new Dijkstra({ level: untrack(() => state.level) });
   let keydownListener = (e: KeyboardEvent) => {
     if (e.key == "ArrowLeft") {
       setState("pacMan", "bufferedMove", "Left");
