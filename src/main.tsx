@@ -61,7 +61,7 @@ const level = [
   "**..........................**",
   "**.****.**.********.**.****.**",
   "**.****.**.********.**.****.**",
-  "**......**....**....**.....G**",
+  "**......**....**....**......**",
   "*******.***** ** *****.*******",
   "*******.***** ** *****.*******",
   "     **.**          **.**     ",
@@ -384,6 +384,39 @@ function updateState(params: {
           x: ghost.pos.x + movement.x,
           y: ghost.pos.y + movement.y,
         };
+        // cancel ghost move if it will collide with another ghost
+        // XXX: Disabled for now, they all get jambed when they thouch
+        if (false) {
+          let cancelMove = false;
+          let ghostAMinX = ghost.pos.x;
+          let ghostAMinY = ghost.pos.y;
+          let ghostAMaxX = ghost.pos.x + BLOCK_SIZE;
+          let ghostAMaxY = ghost.pos.y + BLOCK_SIZE;
+          let tollerance = BLOCK_SIZE * 0.8;
+          for (let i = 0; i < state.ghosts.length; ++i) {
+            if (i == ghostIdx) {
+              continue;
+            }
+            let ghostB = state.ghosts[i];
+            let ghostBMinX = ghostB.pos.x;
+            let ghostBMinY = ghostB.pos.y;
+            let ghostBMaxX = ghostB.pos.x + BLOCK_SIZE;
+            let ghostBMaxY = ghostB.pos.y + BLOCK_SIZE;
+            if (
+              ghostBMinX < ghostAMaxX - tollerance &&
+              ghostBMinY < ghostAMaxY - tollerance &&
+              ghostBMaxX > ghostAMinX + tollerance &&
+              ghostBMaxY > ghostAMinY + tollerance
+            ) {
+              cancelMove = true;
+              break;
+            }
+          }
+          if (cancelMove) {
+            continue;
+          }
+        }
+        //
         setState("ghosts", ghostIdx, "pos", newPos);
         if (movement.x != 0 || movement.y != 0) {
           setState("ghosts", ghostIdx, "faceDir", movement);
