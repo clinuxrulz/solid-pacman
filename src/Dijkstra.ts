@@ -46,9 +46,13 @@ export class Dijkstra {
             let nextDist = this.distances[yIdx][xIdx]! + 1.0;
             // Up
             if (yIdx > 0) {
+                let prevDist = this.distances[yIdx-1][xIdx];
                 if (
                     this.level[yIdx-1][xIdx] != "*" &&
-                    this.distances[yIdx-1][xIdx] == undefined
+                    (
+                        prevDist == undefined ||
+                        nextDist < prevDist
+                    )
                 ) {
                     this.distances[yIdx-1][xIdx] = nextDist;
                     this.queue.push(xIdx, yIdx-1);
@@ -56,9 +60,13 @@ export class Dijkstra {
             }
             // Down
             if (yIdx < this.distances.length-1) {
+                let prevDist = this.distances[yIdx+1][xIdx];
                 if (
                     this.level[yIdx+1][xIdx] != "*" &&
-                    this.distances[yIdx+1][xIdx] == undefined
+                    (
+                        prevDist == undefined ||
+                        nextDist < prevDist
+                    )
                 ) {
                     this.distances[yIdx+1][xIdx] = nextDist;
                     this.queue.push(xIdx, yIdx+1);
@@ -66,9 +74,13 @@ export class Dijkstra {
             }
             // Left
             if (xIdx > 0) {
+                let prevDist = this.distances[yIdx][xIdx-1];
                 if (
                     this.level[yIdx][xIdx-1] != "*" &&
-                    this.distances[yIdx][xIdx-1] == undefined
+                    (
+                        prevDist == undefined ||
+                        nextDist < prevDist
+                    )
                 ) {
                     this.distances[yIdx][xIdx-1] = nextDist;
                     this.queue.push(xIdx-1, yIdx);
@@ -76,9 +88,13 @@ export class Dijkstra {
             }
             // Right
             if (xIdx < this.distances[yIdx].length-1) {
+                let prevDist = this.distances[yIdx][xIdx+1];
                 if (
                     this.level[yIdx][xIdx+1] != "*" &&
-                    this.distances[yIdx][xIdx+1] == undefined
+                    (
+                        prevDist == undefined ||
+                        nextDist < prevDist
+                    )
                 ) {
                     this.distances[yIdx][xIdx + 1] = nextDist;
                     this.queue.push(xIdx+1, yIdx);
@@ -106,10 +122,7 @@ export class Dijkstra {
             x: 0.0,
             y: 0.0,
         };
-        let closestDist: number | undefined = this.distances[source.yIdx][source.xIdx];
-        if (closestDist == undefined) {
-            return closest;
-        }
+        let closestDist: number = Number.POSITIVE_INFINITY;
         if (source.yIdx > 0) {
             let dist = this.distances[source.yIdx-1][source.xIdx];
             if (dist != undefined && dist < closestDist) {

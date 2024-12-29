@@ -61,7 +61,7 @@ const level = [
   "**..........................**",
   "**.****.**.********.**.****.**",
   "**.****.**.********.**.****.**",
-  "**......**....**....**......**",
+  "**......**....**....**.....G**",
   "*******.***** ** *****.*******",
   "*******.***** ** *****.*******",
   "     **.**          **.**     ",
@@ -363,26 +363,30 @@ function updateState(params: {
     { // Ghosts
       for (let ghostIdx = 0; ghostIdx < state.ghosts.length; ++ghostIdx) {
         let ghost = state.ghosts[ghostIdx];
-        let xIdx = Math.floor(ghost.pos.x / BLOCK_SIZE);
-        let yIdx = Math.floor(ghost.pos.y / BLOCK_SIZE);
+        let allowX = (ghost.pos.y % BLOCK_SIZE) == 0;
+        let allowY = (ghost.pos.x % BLOCK_SIZE) == 0;
+        if (!(allowX || allowY)) {
+          continue;
+        }
+        let xIdx = Math.floor((ghost.pos.x + HALF_BLOCK_SIZE) / BLOCK_SIZE);
+        let yIdx = Math.floor((ghost.pos.y + HALF_BLOCK_SIZE) / BLOCK_SIZE);
         let movement = params.dijkstra.getMovementTowardsTarget({
           source: {
             xIdx,
             yIdx,
-          }
+          },
         });
+        if (movement.x != 0 && !allowX || movement.y != 0 && !allowY) {
+          movement.x = ghost.faceDir.x;
+          movement.y = ghost.faceDir.y;
+        }
         let newPos = {
           x: ghost.pos.x + movement.x,
           y: ghost.pos.y + movement.y,
         };
-        let xIdx2 = Math.floor(newPos.x / BLOCK_SIZE);
-        let yIdx2 = Math.floor(newPos.y / BLOCK_SIZE);
-        let canDoMove =
-          (movement.x == 0 && (pos.y % BLOCK_SIZE) == 0) ||
-          (movement.y == 0 && (pos.x % BLOCK_SIZE) == 0);
-        let hitsWall = level[yIdx2][xIdx2] == "*";
-        if (!hitsWall && canDoMove) {
-          setState("ghosts", ghostIdx, "pos", newPos);
+        setState("ghosts", ghostIdx, "pos", newPos);
+        if (movement.x != 0 || movement.y != 0) {
+          setState("ghosts", ghostIdx, "faceDir", movement);
         }
       }
     }
