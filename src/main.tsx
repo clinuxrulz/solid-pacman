@@ -142,8 +142,8 @@ type GameState = {
   level: Level;
 };
 
-function Game(props: {}): JSX.Element {
-  let [state, setState] = createStore<GameState>({
+function makeInitGameState(): GameState {
+  return {
     playingIntroMusic: false,
     playingIntroMusicStartTime: 0.0,
     playing: false,
@@ -163,7 +163,11 @@ function Game(props: {}): JSX.Element {
     },
     ghosts: findGhosts(level),
     level: loadLevel(level),
-  });
+  };
+}
+
+function Game(props: {}): JSX.Element {
+  let [state, setState] = createStore<GameState>(makeInitGameState());
   let dijkstra = new Dijkstra({ level: untrack(() => state.level) });
   let keydownListener = (e: KeyboardEvent) => {
     if (!state.playing && !state.playingIntroMusic) {
@@ -482,6 +486,8 @@ function updateState(params: {
     let dying = state.pacMan.dying;
     if (dying.animationIdx < dying.animationLength-1) {
       setState("pacMan", "dying", "animationIdx", (idx) => idx + 1);
+    } else {
+      setState(makeInitGameState());
     }
   }
 }
