@@ -2,7 +2,9 @@ import { render } from "solid-js/web";
 import {
   For,
   Index,
+  Match,
   Show,
+  Switch,
   batch,
   createEffect,
   createMemo,
@@ -456,6 +458,12 @@ function updateState(params: {
       }
     }
   }
+  if (state.pacMan != undefined && state.pacMan.dying != undefined) {
+    let dying = state.pacMan.dying;
+    if (dying.animationIdx < dying.animationLength-1) {
+      setState("pacMan", "dying", "animationIdx", (idx) => idx + 1);
+    }
+  }
 }
 
 function Render(props: {
@@ -488,14 +496,50 @@ function Render(props: {
               let ca = Math.cos((pacManAngle() * Math.PI) / 180.0);
               return ca < 0.0;
             });
+            let mouthSize = createMemo(() => {
+              let pacMan2 = pacMan();
+              if (pacMan2.dying == undefined) {
+                return 1 + 59 * Math.abs(Math.sin(props.time * 15));
+              } else {
+                return Math.min(1.0, (pacMan2.dying.animationIdx + 1) / (0.8 * pacMan2.dying.animationLength)) * 359.0;
+              }
+            });
+            let deathExplode = createMemo(() => {
+              let pacMan2 = pacMan();
+              if (pacMan2.dying == undefined) {
+                return undefined;
+              }
+              let t = (pacMan2.dying.animationIdx + 1) / (0.8 * pacMan2.dying.animationLength);
+              if (t < 1.0) {
+                return undefined;
+              }
+              return {
+                showPop: t >= 1.0 && pacMan2.dying.animationIdx < pacMan2.dying.animationLength-1,
+              };
+            });
             return (
-              <RenderPacMan
-                x={pacMan().pos.x}
-                y={pacMan().pos.y}
-                angle={pacManAngle()}
-                mouthSize={1 + 59 * Math.abs(Math.sin(props.time * 15))}
-                flipY={flipY()}
-              />
+              <Switch
+                fallback={
+                  <RenderPacMan
+                    x={pacMan().pos.x}
+                    y={pacMan().pos.y}
+                    angle={pacManAngle()}
+                    mouthSize={mouthSize()}
+                    flipY={flipY()}
+                  />
+                }
+              >
+                <Match when={deathExplode()}>
+                  {(deathExplode2) => (
+                    <Show when={deathExplode2().showPop}>
+                      <RenderPop
+                        x={pacMan().pos.x}
+                        y={pacMan().pos.y}
+                      />
+                    </Show>
+                  )}
+                </Match>
+              </Switch>
             );
           }}
         </Show>
@@ -1031,7 +1075,7 @@ function RenderPacMan(props: {
       <path
         d={
           `M${props.x + HALF_BLOCK_SIZE + r() * ca()} ${props.y + HALF_BLOCK_SIZE - r() * sa()} ` +
-          `A${r()} ${r()} 0 1 0 ${props.x + HALF_BLOCK_SIZE + r() * ca()} ${props.y + HALF_BLOCK_SIZE + r() * sa()} ` +
+          `A${r()} ${r()} 0 ${props.mouthSize <= 180.0 ? "1" : "0"} 0 ${props.x + HALF_BLOCK_SIZE + r() * ca()} ${props.y + HALF_BLOCK_SIZE + r() * sa()} ` +
           `L${props.x + 0.5 * HALF_BLOCK_SIZE} ${props.y + HALF_BLOCK_SIZE} ` +
           `Z`
         }
@@ -1116,4 +1160,9 @@ function RenderGhost(props: {
       </For>
     </g>
   );
+}
+
+function RenderPop(props: { x: number, y: number }): JSX.Element {
+
+  return ;
 }
