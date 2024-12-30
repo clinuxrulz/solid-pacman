@@ -11,6 +11,7 @@ import {
   createResource,
   createSignal,
   onCleanup,
+  onMount,
   untrack,
 } from "solid-js";
 import type { Accessor, Component, JSX } from "solid-js";
@@ -600,14 +601,57 @@ function Render(props: {
       }
     | undefined;
 }): JSX.Element {
+  let [ svgElement, setSvgElement, ] = createSignal<SVGSVGElement>();
+  let [ svgSize, setSvgSize, ] = createSignal<{ width: number, height: number }>();
+  onMount(() => {
+    let svg = svgElement();
+    if (svg == undefined) {
+      return undefined;
+    }
+    let box = svg.getBoundingClientRect();
+    setSvgSize({
+      width: box.width,
+      height: box.height,
+    });
+  });
+  let panScale = createMemo(() => {
+    let svgSize2 = svgSize();
+    if (svgSize2 == undefined) {
+      return undefined;
+    }
+    let mapWidth = 0;
+    for (let row of props.state.level) {
+      let width = row.length * BLOCK_SIZE;
+      if (width > mapWidth) {
+        mapWidth = width;
+      }
+    }
+    if (mapWidth == 0) {
+      return undefined;
+    }
+    let mapHeight = props.state.level.length * BLOCK_SIZE;
+    let scale = Math.min(svgSize2.width / mapWidth, svgSize2.height / mapHeight);
+    let offsetX = 0.5 * (svgSize2.width / scale - mapWidth);
+    let offsetY = 0.5 * (svgSize2.height / scale - mapHeight);
+    return {
+      pan: {
+        x: offsetX,
+        y: offsetY,
+      },
+      scale,
+    };
+  });
+  let pan = () => panScale()?.pan;
+  let scale = () => panScale()?.scale;
   return (
     <svg
+      ref={setSvgElement}
       style={{
         width: "100%",
         height: "100%",
       }}
     >
-      <g transform="scale(1.5)">
+      <g transform={`scale(${scale() ?? 1.0}) translate(${pan()?.x ?? 0.0} ${pan()?.y ?? 0.0})`}>
         <RenderLevel level={props.state.level} />
         <Show when={props.state.pacMan}>
           {(pacMan) => {
