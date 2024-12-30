@@ -26,6 +26,27 @@ const WALL_THICKNESS = 2;
 const INTRO_MUSIC_WAIT_TIME = 4.5;
 const GHOST_SCARED_TIME = 3.0;
 const GHOST_SCARED_SKIP_MOVE_EVERY = 1;
+const TARGET_FRAME_RATE = 60;
+const TARGET_TIME_STEP = 1.0 / TARGET_FRAME_RATE;
+
+function throttleUpdate(params: {
+  dtOffset: number,
+  dt: number,
+  updateFn: () => void,
+}): {
+  dtOffset: number,
+} {
+  return batch(() => {
+    let dt2 = params.dtOffset + params.dt;
+    while (dt2 > 0.0) {
+      params.updateFn();
+      dt2 -= TARGET_TIME_STEP;
+    }
+    return {
+      dtOffset: dt2,
+    };
+  });
+}
 
 let sounds = await Sounds.load();
 console.log(sounds);
@@ -252,18 +273,24 @@ function Game(props: {}): JSX.Element {
   requestAnimationFrame(updateTime);
   {
     let lastTime = 0.0;
+    let dtOffset = 0.0;
     createEffect(() => {
       let time2 = time();
       let dt = time2 - lastTime;
-      untrack(() =>
-        updateState({
-          state,
-          setState,
+      let { dtOffset: nextDtOffset } = untrack((): { dtOffset: number, } =>
+        throttleUpdate({
+          dtOffset,
           dt,
-          time: time(),
-          dijkstra,
+          updateFn: () => updateState({
+            state,
+            setState,
+            dt,
+            time: time(),
+            dijkstra,
+          })
         }),
       );
+      dtOffset = nextDtOffset;
       lastTime = time2;
     });
   }
