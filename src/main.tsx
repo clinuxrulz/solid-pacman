@@ -193,20 +193,39 @@ function Game(props: {}): JSX.Element {
     firstPlay: true,
   }));
   let dijkstra = new Dijkstra({ level: untrack(() => state.level) });
-  let keydownListener = (e: KeyboardEvent) => {
+  let onAnyKey = () => {
     if (!state.firstPlay && !state.playing && !state.playingIntroMusic) {
       setState("playingIntroMusic", true);
       setState("playingIntroMusicStartTime", time());
       sounds.playSound("Intro");
     }
+  };
+  let onLeftPressed = () => {
+    onAnyKey();
+    setState("pacMan", "bufferedMove", "Left");
+  };
+  let onRightPressed = () => {
+    onAnyKey();
+    setState("pacMan", "bufferedMove", "Right");
+  };
+  let onUpPressed = () => {
+    onAnyKey();
+    setState("pacMan", "bufferedMove", "Up");
+  };
+  let onDownPressed = () => {
+    onAnyKey();
+    setState("pacMan", "bufferedMove", "Down");
+  };
+  let keydownListener = (e: KeyboardEvent) => {
+    onAnyKey();
     if (e.key == "ArrowLeft") {
-      setState("pacMan", "bufferedMove", "Left");
+      onLeftPressed();
     } else if (e.key == "ArrowRight") {
-      setState("pacMan", "bufferedMove", "Right");
+      onRightPressed();
     } else if (e.key == "ArrowUp") {
-      setState("pacMan", "bufferedMove", "Up");
+      onUpPressed();
     } else if (e.key == "ArrowDown") {
-      setState("pacMan", "bufferedMove", "Down");
+      onDownPressed();
     }
   };
   //let app = document.getElementById("app")!;
@@ -248,7 +267,17 @@ function Game(props: {}): JSX.Element {
       lastTime = time2;
     });
   }
-  return <Render state={state} time={time()} pacMan={state.pacMan} />;
+  return (
+    <Render
+      state={state}
+      time={time()}
+      pacMan={state.pacMan}
+      onUpPressed={onUpPressed}
+      onDownPressed={onDownPressed}
+      onLeftPressed={onLeftPressed}
+      onRightPressed={onRightPressed}
+    />
+  );
 }
 
 function updateState(params: {
@@ -600,6 +629,10 @@ function Render(props: {
         pos: { x: number; y: number };
       }
     | undefined;
+  onUpPressed: () => void,
+  onDownPressed: () => void,
+  onLeftPressed: () => void,
+  onRightPressed: () => void,
 }): JSX.Element {
   let [ svgElement, setSvgElement, ] = createSignal<SVGSVGElement>();
   let [ svgSize, setSvgSize, ] = createSignal<{ width: number, height: number }>();
@@ -644,132 +677,147 @@ function Render(props: {
   let pan = () => panScale()?.pan;
   let scale = () => panScale()?.scale;
   return (
-    <svg
-      ref={setSvgElement}
+    <div
       style={{
-        width: "100%",
-        height: "100%",
+        "display": "flex",
+        "flex-direction": "row",
+        "position": "relative",
+        "width": "100%",
+        "height": "100%",
       }}
     >
-      <g transform={`scale(${scale() ?? 1.0}) translate(${pan()?.x ?? 0.0} ${pan()?.y ?? 0.0})`}>
-        <RenderLevel level={props.state.level} />
-        <Show when={props.state.pacMan}>
-          {(pacMan) => {
-            let pacManAngle = createMemo(() => {
-              let angle =
-                (Math.atan2(pacMan().faceDir.y, pacMan().faceDir.x) * 180.0) /
-                Math.PI;
-              return angle;
-            });
-            let flipY = createMemo(() => {
-              let ca = Math.cos((pacManAngle() * Math.PI) / 180.0);
-              return ca < 0.0;
-            });
-            let mouthSize = createMemo(() => {
-              let pacMan2 = pacMan();
-              if (pacMan2.dying == undefined) {
-                return 1 + 59 * Math.abs(Math.sin(props.time * 15));
-              } else {
-                return Math.min(1.0, (pacMan2.dying.animationIdx + 1) / (0.8 * pacMan2.dying.animationLength)) * 359.0;
-              }
-            });
-            let deathExplode = createMemo(() => {
-              let pacMan2 = pacMan();
-              if (pacMan2.dying == undefined) {
-                return undefined;
-              }
-              let t = (pacMan2.dying.animationIdx + 1) / (0.8 * pacMan2.dying.animationLength);
-              if (t < 1.0) {
-                return undefined;
-              }
-              return {
-                showPop: t >= 1.0 && pacMan2.dying.animationIdx < pacMan2.dying.animationLength-1,
-              };
-            });
-            return (
+      <svg
+        ref={setSvgElement}
+        style={{
+          "flex-grow": "1",
+        }}
+      >
+        <g transform={`scale(${scale() ?? 1.0}) translate(${pan()?.x ?? 0.0} ${pan()?.y ?? 0.0})`}>
+          <RenderLevel level={props.state.level} />
+          <Show when={props.state.pacMan}>
+            {(pacMan) => {
+              let pacManAngle = createMemo(() => {
+                let angle =
+                  (Math.atan2(pacMan().faceDir.y, pacMan().faceDir.x) * 180.0) /
+                  Math.PI;
+                return angle;
+              });
+              let flipY = createMemo(() => {
+                let ca = Math.cos((pacManAngle() * Math.PI) / 180.0);
+                return ca < 0.0;
+              });
+              let mouthSize = createMemo(() => {
+                let pacMan2 = pacMan();
+                if (pacMan2.dying == undefined) {
+                  return 1 + 59 * Math.abs(Math.sin(props.time * 15));
+                } else {
+                  return Math.min(1.0, (pacMan2.dying.animationIdx + 1) / (0.8 * pacMan2.dying.animationLength)) * 359.0;
+                }
+              });
+              let deathExplode = createMemo(() => {
+                let pacMan2 = pacMan();
+                if (pacMan2.dying == undefined) {
+                  return undefined;
+                }
+                let t = (pacMan2.dying.animationIdx + 1) / (0.8 * pacMan2.dying.animationLength);
+                if (t < 1.0) {
+                  return undefined;
+                }
+                return {
+                  showPop: t >= 1.0 && pacMan2.dying.animationIdx < pacMan2.dying.animationLength-1,
+                };
+              });
+              return (
+                <Switch
+                  fallback={
+                    <RenderPacMan
+                      x={pacMan().pos.x}
+                      y={pacMan().pos.y}
+                      angle={pacManAngle()}
+                      mouthSize={mouthSize()}
+                      flipY={flipY()}
+                    />
+                  }
+                >
+                  <Match when={deathExplode()}>
+                    {(deathExplode2) => (
+                      <Show when={deathExplode2().showPop}>
+                        <RenderPop
+                          x={pacMan().pos.x}
+                          y={pacMan().pos.y}
+                        />
+                      </Show>
+                    )}
+                  </Match>
+                </Switch>
+              );
+            }}
+          </Show>
+          <For each={props.state.ghosts}>
+            {(ghost) => (
+              <RenderGhost
+                x={ghost.pos.x}
+                y={ghost.pos.y}
+                faceDir={ghost.faceDir}
+                colour={ghost.colour}
+                scared={props.state.ghostsScared != undefined}
+                died={ghost.died}
+              />
+            )}
+          </For>
+          <Show when={!props.state.playingIntroMusic && !props.state.playing}>\
+            <text
+              x={0.5 * (props.state.level?.[0]?.length ?? 0) * BLOCK_SIZE}
+              y="125"
+              text-anchor="middle"
+              font-weight="bold"
+              stroke="black"
+              stroke-width="0.5"
+              fill="red"
+            >
               <Switch
                 fallback={
-                  <RenderPacMan
-                    x={pacMan().pos.x}
-                    y={pacMan().pos.y}
-                    angle={pacManAngle()}
-                    mouthSize={mouthSize()}
-                    flipY={flipY()}
-                  />
+                  <>Press any key to start!</>
                 }
               >
-                <Match when={deathExplode()}>
-                  {(deathExplode2) => (
-                    <Show when={deathExplode2().showPop}>
-                      <RenderPop
-                        x={pacMan().pos.x}
-                        y={pacMan().pos.y}
-                      />
-                    </Show>
-                  )}
+                <Match when={props.state.firstPlay}>
+                  Click/tounch to start!
                 </Match>
               </Switch>
-            );
-          }}
-        </Show>
-        <For each={props.state.ghosts}>
-          {(ghost) => (
-            <RenderGhost
-              x={ghost.pos.x}
-              y={ghost.pos.y}
-              faceDir={ghost.faceDir}
-              colour={ghost.colour}
-              scared={props.state.ghostsScared != undefined}
-              died={ghost.died}
-            />
-          )}
-        </For>
-        <Show when={!props.state.playingIntroMusic && !props.state.playing}>\
-          <text
-            x={0.5 * (props.state.level?.[0]?.length ?? 0) * BLOCK_SIZE}
-            y="125"
-            text-anchor="middle"
-            font-weight="bold"
-            stroke="black"
-            stroke-width="0.5"
-            fill="red"
-          >
-            <Switch
-              fallback={
-                <>Press any key to start!</>
-              }
+            </text>
+          </Show>
+          <Show when={props.state.playingIntroMusic}>
+            <text
+              x={0.5 * (props.state.level?.[0]?.length ?? 0) * BLOCK_SIZE}
+              y="125"
+              text-anchor="middle"
+              font-weight="bold"
+              stroke="black"
+              stroke-width="0.5"
+              fill="red"
             >
-              <Match when={props.state.firstPlay}>
-                Click/tounch to start!
-              </Match>
-            </Switch>
-          </text>
-        </Show>
-        <Show when={props.state.playingIntroMusic}>
-          <text
-            x={0.5 * (props.state.level?.[0]?.length ?? 0) * BLOCK_SIZE}
-            y="125"
-            text-anchor="middle"
-            font-weight="bold"
-            stroke="black"
-            stroke-width="0.5"
-            fill="red"
-          >
-            {(() => {
-              let countDown = createMemo(() => {
-                let countFrom = 5;
-                let r = ((props.time + 0.2) - props.state.playingIntroMusicStartTime) / INTRO_MUSIC_WAIT_TIME;
-                if (r >= 1.0) {
-                  return "GO";
-                }
-                return Math.ceil(5 - countFrom * r);
-              });
-              return (<>{countDown()}</>);
-            })()}
-          </text>
-        </Show>
-      </g>
-    </svg>
+              {(() => {
+                let countDown = createMemo(() => {
+                  let countFrom = 5;
+                  let r = ((props.time + 0.2) - props.state.playingIntroMusicStartTime) / INTRO_MUSIC_WAIT_TIME;
+                  if (r >= 1.0) {
+                    return "GO";
+                  }
+                  return Math.ceil(5 - countFrom * r);
+                });
+                return (<>{countDown()}</>);
+              })()}
+            </text>
+          </Show>
+        </g>
+      </svg>
+      <RenderTouchControls
+        onUpPressed={props.onUpPressed}
+        onDownPressed={props.onDownPressed}
+        onLeftPressed={props.onLeftPressed}
+        onRightPressed={props.onRightPressed}
+      />
+    </div>
   );
 }
 
@@ -1397,5 +1445,61 @@ function RenderPop(props: { x: number, y: number }): JSX.Element {
         )}
       </For>
     </g>
+  );
+}
+
+function RenderTouchControls(props: {
+  onUpPressed: () => void,
+  onDownPressed: () => void,
+  onLeftPressed: () => void,
+  onRightPressed: () => void,
+}): JSX.Element {
+  let minOfWH = Math.min(window.innerWidth, window.innerHeight);
+  let buttonStyle: string | JSX.CSSProperties = {
+    "background-color": "grey",
+    "border": "2px lightgrey solid",
+    "width": `${minOfWH * 0.08}px`,
+    "height": `${minOfWH * 0.08}px`,
+    "font-size": `${minOfWH * 0.06}px`,
+    "text-align": "center",
+    "cursor": "pointer",
+  };
+  return (
+    <div style={{
+      "display": "grid",
+      "grid-template-columns": "auto auto auto",
+      "position": "absolute",
+      "right": `${minOfWH * 0.12}px`,
+      "bottom": `${minOfWH * 0.12}px`,
+    }}>
+      <div></div>
+      <div
+        onpointerdown={() => props.onUpPressed()}
+        style={buttonStyle}
+      >
+        {"\u25B2"}
+      </div>
+      <div></div>
+      <div
+        onpointerdown={() => props.onLeftPressed()}
+        style={buttonStyle}
+      >
+        {"\u25C0"}
+      </div>
+      <div></div>
+      <div
+        onpointerdown={() => props.onRightPressed()}
+        style={buttonStyle}
+      >
+        {"\u25B6"}
+      </div>
+      <div></div>
+      <div
+        onpointerdown={() => props.onDownPressed()}
+        style={buttonStyle}
+      >
+        {"\u25BC"}
+      </div>
+    </div>
   );
 }
