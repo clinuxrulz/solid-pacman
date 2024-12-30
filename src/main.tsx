@@ -34,17 +34,22 @@ function loadLevel(data: string[]): Level {
   );
 }
 
-function findGhosts(data: string[]): GameState["ghosts"] {
+function findGhosts(level: Level): GameState["ghosts"] {
   let result: GameState["ghosts"] = [];
   let atY = 0;
-  for (let i = 0; i < data.length; ++i, atY += BLOCK_SIZE) {
-    let row = data[i];
+  for (let i = 0; i < level.length; ++i, atY += BLOCK_SIZE) {
+    let row = level[i];
     let atX = 0;
     for (let j = 0; j < row.length; ++j, atX += BLOCK_SIZE) {
-      let cell = row.charAt(j);
+      let cell = row[j];
       if (cell == "G") {
+        let homeMap = new Dijkstra({ level, });
+        homeMap.updateDistanceToTarget({
+          target: { xIdx: j, yIdx: i, },
+        });
         result.push({
-          homePos: { x: atX, y: atY, },
+          homePos: { xIdx: j, yIdx: i, },
+          homeMap,
           pos: { x: atX, y: atY, },
           faceDir: { x: 0, y: -1, },
           colour: genGhostColour(),
@@ -120,6 +125,7 @@ appDiv.style.setProperty("height", "100%");
 appDiv.style.setProperty("tabindex", "0");
 
 const GHOST_SCARED_TIME = 10.0;
+const GHOST_SCARED_SKIP_MOVE_EVERY = 1;
 
 type GameState = {
   playingIntroMusic: boolean,
@@ -140,7 +146,8 @@ type GameState = {
       }
     | undefined;
   ghosts: {
-    homePos: { x: number, y: number, },
+    homePos: { xIdx: number, yIdx: number, },
+    homeMap: Dijkstra,
     pos: { x: number, y: number, },
     faceDir: { x: number, y: number, },
     colour: string,
@@ -148,11 +155,13 @@ type GameState = {
   }[];
   ghostsScared: {
     startTime: number,
+    ticksForSlowness: number,
   } | undefined,
   level: Level;
 };
 
 function makeInitGameState(params: { firstPlay: boolean, }): GameState {
+  let level2 = loadLevel(level);
   return {
     playingIntroMusic: false,
     playingIntroMusicStartTime: 0.0,
@@ -172,9 +181,9 @@ function makeInitGameState(params: { firstPlay: boolean, }): GameState {
       lastChompTime: -1.0,
       dying: undefined,
     },
-    ghosts: findGhosts(level),
+    ghosts: findGhosts(level2),
     ghostsScared: undefined,
-    level: loadLevel(level),
+    level: level2,
   };
 }
 
@@ -362,6 +371,7 @@ function updateState(params: {
         sounds.playSound("Fruit");
         setState("ghostsScared", {
           startTime: params.time,
+          ticksForSlowness: 0,
         });
       }
     }
@@ -464,10 +474,25 @@ function updateState(params: {
       });
     }
     { // Ghosts
-      let movementFn;
+      let movementFn: (params: {
+        source: {
+          xIdx: number,
+          yIdx: number,
+        }
+      }) => {
+        x: number,
+        y: number,
+      };
+      let skipMoveIfAlive = false;
       if (state.ghostsScared == undefined) {
         movementFn = params.dijkstra.getMovementTowardsTarget.bind(params.dijkstra);
       } else {
+        if (state.ghostsScared.ticksForSlowness == GHOST_SCARED_SKIP_MOVE_EVERY) {
+          skipMoveIfAlive = true;
+          setState("ghostsScared", "ticksForSlowness", 0);
+        } else {
+          setState("ghostsScared", "ticksForSlowness", (x) => x + 1);
+        }
         movementFn = params.dijkstra.getMovementAwayFromTarget.bind(params.dijkstra);
         if (params.time - state.ghostsScared.startTime >= GHOST_SCARED_TIME) {
           setState("ghostsScared", undefined);
@@ -475,6 +500,15 @@ function updateState(params: {
       }
       for (let ghostIdx = 0; ghostIdx < state.ghosts.length; ++ghostIdx) {
         let ghost = state.ghosts[ghostIdx];
+        let movementFn2: typeof movementFn;
+        if (ghost.died) {
+          movementFn2 = ghost.homeMap.getMovementTowardsTarget.bind(ghost.homeMap);
+        } else {
+          if (skipMoveIfAlive) {
+            continue;
+          }
+          movementFn2 = movementFn;
+        }
         let allowX = (ghost.pos.y % BLOCK_SIZE) == 0;
         let allowY = (ghost.pos.x % BLOCK_SIZE) == 0;
         if (!(allowX || allowY)) {
@@ -482,7 +516,12 @@ function updateState(params: {
         }
         let xIdx = Math.floor((ghost.pos.x + HALF_BLOCK_SIZE) / BLOCK_SIZE);
         let yIdx = Math.floor((ghost.pos.y + HALF_BLOCK_SIZE) / BLOCK_SIZE);
-        let movement = movementFn({
+        if (ghost.died) {
+          if (xIdx == ghost.homePos.xIdx && yIdx == ghost.homePos.yIdx) {
+            setState("ghosts", ghostIdx, "died", false);
+          }
+        }
+        let movement = movementFn2({
           source: {
             xIdx,
             yIdx,
@@ -491,6 +530,10 @@ function updateState(params: {
         if (movement.x != 0 && !allowX || movement.y != 0 && !allowY) {
           movement.x = ghost.faceDir.x;
           movement.y = ghost.faceDir.y;
+        }
+        if (ghost.died) {
+          movement.x = (movement.x & 1) == 1 ? movement.x : 2 * movement.x;
+          movement.y = (movement.y & 1) == 1 ? movement.y : 2 * movement.y;
         }
         let newPos = {
           x: ghost.pos.x + movement.x,
