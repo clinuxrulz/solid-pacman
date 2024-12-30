@@ -3,6 +3,9 @@
 ## Description
 PacMan implemented via Solid.js and rendered to an SVG element.
 
+## Demo link
+https://clinuxrulz.github.io/pacman/
+
 ## Running
 - First time only `npm install`
 - Next and everytime `npm run start`
