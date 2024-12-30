@@ -22,6 +22,9 @@ import { Dijkstra } from "./Dijkstra";
 const BLOCK_SIZE = 10;
 const HALF_BLOCK_SIZE = BLOCK_SIZE / 2;
 const WALL_THICKNESS = 2;
+const INTRO_MUSIC_WAIT_TIME = 4.5;
+const GHOST_SCARED_TIME = 3.0;
+const GHOST_SCARED_SKIP_MOVE_EVERY = 1;
 
 let sounds = await Sounds.load();
 console.log(sounds);
@@ -123,9 +126,6 @@ let appDiv = document.getElementById("app")!;
 appDiv.style.setProperty("width", "100%");
 appDiv.style.setProperty("height", "100%");
 appDiv.style.setProperty("tabindex", "0");
-
-const GHOST_SCARED_TIME = 10.0;
-const GHOST_SCARED_SKIP_MOVE_EVERY = 1;
 
 type GameState = {
   playingIntroMusic: boolean,
@@ -261,7 +261,7 @@ function updateState(params: {
   let setState = params.setState;
   if (!params.state.playing) {
     if (params.state.playingIntroMusic) {
-      if (params.time - params.state.playingIntroMusicStartTime >= 4.5) {
+      if (params.time - params.state.playingIntroMusicStartTime >= INTRO_MUSIC_WAIT_TIME) {
         setState("playingIntroMusic", false);
         setState("playing", true);
       }
@@ -682,9 +682,12 @@ function Render(props: {
         </For>
         <Show when={!props.state.playingIntroMusic && !props.state.playing}>\
           <text
-            x="80"
-            y="140"
-            stroke="none"
+            x={0.5 * (props.state.level?.[0]?.length ?? 0) * BLOCK_SIZE}
+            y="125"
+            text-anchor="middle"
+            font-weight="bold"
+            stroke="black"
+            stroke-width="0.5"
             fill="red"
           >
             <Switch
@@ -698,23 +701,29 @@ function Render(props: {
             </Switch>
           </text>
         </Show>
-        {/*
-        <RenderVerticleBlock x={10} y={10 + BLOCK_SIZE} />
-        <RenderHorizontalBlock x={10 + BLOCK_SIZE} y={10} />
-        <RenderTopLeftCornerBlock x={10} y={10} />
-        <RenderTopRightCornerBlock x={10 + BLOCK_SIZE * 2} y={10} />
-        <RenderVerticleBlock x={10 + BLOCK_SIZE * 2} y={10 + BLOCK_SIZE} />
-        <RenderBottomLeftCornerBlock x={10} y={10 + BLOCK_SIZE * 2} />
-        <RenderBottomRightCornerBlock
-          x={10 + BLOCK_SIZE * 2}
-          y={10 + BLOCK_SIZE * 2}
-        />
-        <RenderTDownBlock x={10 + BLOCK_SIZE * 3} y={10 + BLOCK_SIZE} />
-        <RenderTUpBlock x={10 + BLOCK_SIZE * 4} y={10 + BLOCK_SIZE} />
-        <RenderTRightBlock x={10 + BLOCK_SIZE * 5} y={10 + BLOCK_SIZE} />
-        <RenderTLeftBlock x={10 + BLOCK_SIZE * 6} y={10 + BLOCK_SIZE} />
-        <RenderCrossBlock x={10 + BLOCK_SIZE * 7} y={10 + BLOCK_SIZE} />
-        */}
+        <Show when={props.state.playingIntroMusic}>
+          <text
+            x={0.5 * (props.state.level?.[0]?.length ?? 0) * BLOCK_SIZE}
+            y="125"
+            text-anchor="middle"
+            font-weight="bold"
+            stroke="black"
+            stroke-width="0.5"
+            fill="red"
+          >
+            {(() => {
+              let countDown = createMemo(() => {
+                let countFrom = 5;
+                let r = ((props.time + 0.2) - props.state.playingIntroMusicStartTime) / INTRO_MUSIC_WAIT_TIME;
+                if (r >= 1.0) {
+                  return "GO";
+                }
+                return Math.ceil(5 - countFrom * r);
+              });
+              return (<>{countDown()}</>);
+            })()}
+          </text>
+        </Show>
       </g>
     </svg>
   );
