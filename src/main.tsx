@@ -44,9 +44,11 @@ function findGhosts(data: string[]): GameState["ghosts"] {
       let cell = row.charAt(j);
       if (cell == "G") {
         result.push({
+          homePos: { x: atX, y: atY, },
           pos: { x: atX, y: atY, },
           faceDir: { x: 0, y: -1, },
           colour: genGhostColour(),
+          died: false,
         });
       }
     }
@@ -138,9 +140,11 @@ type GameState = {
       }
     | undefined;
   ghosts: {
+    homePos: { x: number, y: number, },
     pos: { x: number, y: number, },
     faceDir: { x: number, y: number, },
     colour: string,
+    died: boolean,
   }[];
   ghostsScared: {
     startTime: number,
@@ -367,7 +371,12 @@ function updateState(params: {
       let pacManMinY = state.pacMan.pos.y;
       let pacManMaxX = state.pacMan.pos.x + BLOCK_SIZE;
       let pacManMaxY = state.pacMan.pos.y + BLOCK_SIZE;
-      for (let ghost of state.ghosts) {
+      let playedEatGhostSound = false;
+      for (let ghostIdx = 0; ghostIdx < state.ghosts.length; ++ghostIdx) {
+        let ghost = state.ghosts[ghostIdx];
+        if (ghost.died) {
+          continue;
+        }
         let ghostMinX = ghost.pos.x;
         let ghostMinY = ghost.pos.y;
         let ghostMaxX = ghost.pos.x + BLOCK_SIZE;
@@ -378,12 +387,20 @@ function updateState(params: {
           ghostMaxX > pacManMinX &&
           ghostMaxY > pacManMinY
         ) {
-          setState("pacMan", "dying", {
-            animationIdx: 0,
-            animationLength: 80,
-          });
-          sounds.playSound("Death");
-          return;
+          if (state.ghostsScared) {
+            setState("ghosts", ghostIdx, "died", true);
+            if (!playedEatGhostSound) {
+              sounds.playSound("Ghost");
+              playedEatGhostSound = true;
+            }
+          } else {
+            setState("pacMan", "dying", {
+              animationIdx: 0,
+              animationLength: 80,
+            });
+            sounds.playSound("Death");
+            return;
+          }
         }
       }
     }
@@ -616,6 +633,7 @@ function Render(props: {
               faceDir={ghost.faceDir}
               colour={ghost.colour}
               scared={props.state.ghostsScared != undefined}
+              died={ghost.died}
             />
           )}
         </For>
@@ -1184,6 +1202,7 @@ function RenderGhost(props: {
     y: number;
   };
   scared: boolean,
+  died: boolean,
 }): JSX.Element {
   let ghostWidth = BLOCK_SIZE;
   let ghostHeight = 1.5 * BLOCK_SIZE;
@@ -1198,28 +1217,30 @@ function RenderGhost(props: {
     <g
       transform={`translate(${props.x + 0.5 * BLOCK_SIZE - 0.5 * ghostWidth} ${props.y + 0.5 * BLOCK_SIZE - 0.5 * ghostHeight})`}
     >
-      <path
-        d={
-          `M${ghostWidth} ${ghostHeight} ` +
-          `l0 ${-(ghostHeight - ghostHeadRadius)} ` +
-          `A${ghostHeadRadius} ${ghostHeadRadius} 0 0 0 0 ${ghostHeadRadius} ` +
-          `l0 ${ghostHeight - ghostHeadRadius} ` +
-          new Array(zigZagCount)
-            .fill(undefined)
-            .map((_, idx) => {
-              let x1 = ((idx * 2 + 1) * ghostWidth) / (zigZagCount * 2);
-              let x2 = ((idx * 2 + 2) * ghostWidth) / (zigZagCount * 2);
-              return (
-                `L${x1} ${ghostHeight - zigZagHeight} ` +
-                `L${x2} ${ghostHeight}`
-              );
-            })
-            .join(" ")
-        }
-        fill={props.scared ? "blue" : props.colour}
-        stroke={props.scared ? "white" : "none"}
-        stroke-width={WALL_THICKNESS / 2}
-      />
+      <Show when={!props.died}>
+        <path
+          d={
+            `M${ghostWidth} ${ghostHeight} ` +
+            `l0 ${-(ghostHeight - ghostHeadRadius)} ` +
+            `A${ghostHeadRadius} ${ghostHeadRadius} 0 0 0 0 ${ghostHeadRadius} ` +
+            `l0 ${ghostHeight - ghostHeadRadius} ` +
+            new Array(zigZagCount)
+              .fill(undefined)
+              .map((_, idx) => {
+                let x1 = ((idx * 2 + 1) * ghostWidth) / (zigZagCount * 2);
+                let x2 = ((idx * 2 + 2) * ghostWidth) / (zigZagCount * 2);
+                return (
+                  `L${x1} ${ghostHeight - zigZagHeight} ` +
+                  `L${x2} ${ghostHeight}`
+                );
+              })
+              .join(" ")
+          }
+          fill={props.scared ? "blue" : props.colour}
+          stroke={props.scared ? "white" : "none"}
+          stroke-width={WALL_THICKNESS / 2}
+        />
+      </Show>
       <For each={[0.3 * ghostWidth, 0.7 * ghostWidth]}>
         {(eyeX) => {
           return (
