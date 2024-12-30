@@ -447,6 +447,15 @@ function updateState(params: {
       });
     }
     { // Ghosts
+      let movementFn;
+      if (state.ghostsScared == undefined) {
+        movementFn = params.dijkstra.getMovementTowardsTarget.bind(params.dijkstra);
+      } else {
+        movementFn = params.dijkstra.getMovementAwayFromTarget.bind(params.dijkstra);
+        if (params.time - state.ghostsScared.startTime >= GHOST_SCARED_TIME) {
+          setState("ghostsScared", undefined);
+        }
+      }
       for (let ghostIdx = 0; ghostIdx < state.ghosts.length; ++ghostIdx) {
         let ghost = state.ghosts[ghostIdx];
         let allowX = (ghost.pos.y % BLOCK_SIZE) == 0;
@@ -456,7 +465,7 @@ function updateState(params: {
         }
         let xIdx = Math.floor((ghost.pos.x + HALF_BLOCK_SIZE) / BLOCK_SIZE);
         let yIdx = Math.floor((ghost.pos.y + HALF_BLOCK_SIZE) / BLOCK_SIZE);
-        let movement = params.dijkstra.getMovementTowardsTarget({
+        let movement = movementFn({
           source: {
             xIdx,
             yIdx,
