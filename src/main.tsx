@@ -117,6 +117,8 @@ appDiv.style.setProperty("width", "100%");
 appDiv.style.setProperty("height", "100%");
 appDiv.style.setProperty("tabindex", "0");
 
+const GHOST_SCARED_TIME = 10.0;
+
 type GameState = {
   playingIntroMusic: boolean,
   playingIntroMusicStartTime: number,
@@ -140,6 +142,9 @@ type GameState = {
     faceDir: { x: number, y: number, },
     colour: string,
   }[];
+  ghostsScared: {
+    startTime: number,
+  } | undefined,
   level: Level;
 };
 
@@ -164,6 +169,7 @@ function makeInitGameState(params: { firstPlay: boolean, }): GameState {
       dying: undefined,
     },
     ghosts: findGhosts(level),
+    ghostsScared: undefined,
     level: loadLevel(level),
   };
 }
@@ -340,12 +346,19 @@ function updateState(params: {
         ),
       );
       let hitFood = level[yIdx][xIdx] == ".";
+      let hitPowerUp = level[yIdx][xIdx] == "o";
       if (hitFood) {
         setState("level", yIdx, xIdx, " ");
         if (params.time - state.pacMan.lastChompTime >= 0.52) {
           sounds.playSound("Chomp");
           setState("pacMan", "lastChompTime", params.time);
         }
+      } else if (hitPowerUp) {
+        setState("level", yIdx, xIdx, " ");
+        sounds.playSound("Fruit");
+        setState("ghostsScared", {
+          startTime: params.time,
+        });
       }
     }
     {
@@ -593,6 +606,7 @@ function Render(props: {
               y={ghost.pos.y}
               faceDir={ghost.faceDir}
               colour={ghost.colour}
+              scared={props.state.ghostsScared != undefined}
             />
           )}
         </For>
@@ -1160,6 +1174,7 @@ function RenderGhost(props: {
     x: number;
     y: number;
   };
+  scared: boolean,
 }): JSX.Element {
   let ghostWidth = BLOCK_SIZE;
   let ghostHeight = 1.5 * BLOCK_SIZE;
@@ -1192,8 +1207,9 @@ function RenderGhost(props: {
             })
             .join(" ")
         }
-        fill={props.colour}
-        stroke="none"
+        fill={props.scared ? "blue" : props.colour}
+        stroke={props.scared ? "white" : "none"}
+        stroke-width={WALL_THICKNESS / 2}
       />
       <For each={[0.3 * ghostWidth, 0.7 * ghostWidth]}>
         {(eyeX) => {
@@ -1204,8 +1220,8 @@ function RenderGhost(props: {
                 cy={eyeY}
                 rx={ghostEyeWidth}
                 ry={ghostEyeHeight}
-                fill="white"
-                stroke="black"
+                fill={props.scared ? "black" : "white"}
+                stroke={props.scared ? "white" : "black"}
                 stroke-width="0.5"
               />
               <circle
@@ -1213,7 +1229,7 @@ function RenderGhost(props: {
                 cy={eyeY + 0.5 * props.faceDir.y * (ghostEyeHeight - eyeDotRadius)}
                 r={eyeDotRadius}
                 stroke="none"
-                fill="black"
+                fill={props.scared ? "white" : "black"}
               />
             </>
           );
