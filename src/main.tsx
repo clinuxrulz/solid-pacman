@@ -121,6 +121,7 @@ type GameState = {
   playingIntroMusic: boolean,
   playingIntroMusicStartTime: number,
   playing: boolean,
+  firstPlay: boolean,
   pacMan:
     | {
         pos: { x: number; y: number };
@@ -142,11 +143,12 @@ type GameState = {
   level: Level;
 };
 
-function makeInitGameState(): GameState {
+function makeInitGameState(params: { firstPlay: boolean, }): GameState {
   return {
     playingIntroMusic: false,
     playingIntroMusicStartTime: 0.0,
     playing: false,
+    firstPlay: params.firstPlay,
     pacMan: {
       pos: {
         x: 20.0,
@@ -167,10 +169,12 @@ function makeInitGameState(): GameState {
 }
 
 function Game(props: {}): JSX.Element {
-  let [state, setState] = createStore<GameState>(makeInitGameState());
+  let [state, setState] = createStore<GameState>(makeInitGameState({
+    firstPlay: true,
+  }));
   let dijkstra = new Dijkstra({ level: untrack(() => state.level) });
   let keydownListener = (e: KeyboardEvent) => {
-    if (!state.playing && !state.playingIntroMusic) {
+    if (!state.firstPlay && !state.playing && !state.playingIntroMusic) {
       setState("playingIntroMusic", true);
       setState("playingIntroMusicStartTime", time());
       sounds.playSound("Intro");
@@ -189,6 +193,17 @@ function Game(props: {}): JSX.Element {
   document.addEventListener("keydown", keydownListener);
   onCleanup(() => {
     document.removeEventListener("keydown", keydownListener);
+  });
+  let pointerDownListener = (e: PointerEvent) => {
+    if (state.firstPlay && !state.playing && !state.playingIntroMusic) {
+      setState("playingIntroMusic", true);
+      setState("playingIntroMusicStartTime", time());
+      sounds.playSound("Intro");
+    }
+  };
+  document.addEventListener("pointerdown", pointerDownListener);
+  onCleanup(() => {
+    document.removeEventListener("pointerdown", pointerDownListener);
   });
   let [time, setTime] = createSignal(0.0);
   let updateTime = (t: number) => {
@@ -487,7 +502,9 @@ function updateState(params: {
     if (dying.animationIdx < dying.animationLength-1) {
       setState("pacMan", "dying", "animationIdx", (idx) => idx + 1);
     } else {
-      setState(makeInitGameState());
+      setState(makeInitGameState({
+        firstPlay: false,
+      }));
     }
   }
 }
@@ -586,7 +603,15 @@ function Render(props: {
             stroke="none"
             fill="red"
           >
-            Press any key to start!
+            <Switch
+              fallback={
+                <>Press any key to start!</>
+              }
+            >
+              <Match when={props.state.firstPlay}>
+                Click/tounch to start!
+              </Match>
+            </Switch>
           </text>
         </Show>
         {/*
