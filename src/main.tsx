@@ -1485,9 +1485,9 @@ function RenderTouchControls(props: {
   let buttonStyle: string | JSX.CSSProperties = {
     "background-color": "grey",
     "border": "2px lightgrey solid",
-    "width": `${minOfWH * 0.08}px`,
-    "height": `${minOfWH * 0.08}px`,
-    "font-size": `${minOfWH * 0.06}px`,
+    "width": `${minOfWH * 0.12}px`,
+    "height": `${minOfWH * 0.12}px`,
+    "font-size": `${minOfWH * 0.08}px`,
     "text-align": "center",
     "cursor": "pointer",
     "user-select": "none",
