@@ -1490,6 +1490,7 @@ function RenderTouchControls(props: {
     "font-size": `${minOfWH * 0.06}px`,
     "text-align": "center",
     "cursor": "pointer",
+    "user-select": "none",
   };
   return (
     <div style={{
